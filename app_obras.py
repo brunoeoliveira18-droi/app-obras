@@ -12,28 +12,20 @@ st.set_page_config(
     page_icon="🧱"
 )
 
-# Aplicação da paleta de cores verdes baseada na imagem enviada
 st.markdown("""
     <style>
-    /* Fundo geral em tom verde claro e suave */
     .stApp {
         background-color: #f2f7f2;
         color: #1c3b1e;
     }
-    
-    /* Barra lateral estilizada */
     section[data-testid="stSidebar"] {
         background-color: #e2efe2 !important;
         border-right: 2px solid #70B450;
     }
-
-    /* Títulos e Cabeçalhos */
     h1, h2, h3, h4 {
         color: #004716 !important;
         font-weight: 800 !important;
     }
-
-    /* Botões principais */
     .stButton > button {
         background-color: #55A453 !important;
         color: white !important;
@@ -41,14 +33,10 @@ st.markdown("""
         border-radius: 8px !important;
         border: none !important;
         padding: 0.5rem 1rem !important;
-        transition: all 0.3s ease;
     }
     .stButton > button:hover {
         background-color: #008000 !important;
-        box-shadow: 0px 4px 10px rgba(0, 71, 22, 0.3);
     }
-
-    /* Cards de métricas */
     div[data-testid="stMetricValue"] {
         color: #004716 !important;
         font-weight: 800 !important;
@@ -56,15 +44,6 @@ st.markdown("""
     div[data-testid="stMetricLabel"] {
         color: #333333 !important;
         font-weight: bold !important;
-    }
-
-    /* Abas */
-    button[data-baseweb="tab"] {
-        font-weight: bold !important;
-        color: #004716 !important;
-    }
-    button[aria-selected="true"] {
-        border-bottom-color: #008000 !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -181,7 +160,6 @@ AREAS_DETALHADAS = {
 }
 AREAS_DETALHADAS["B1"] = AREAS_DETALHADAS["B"]
 
-# Paleta de cores para os pavimentos na tabela
 CORES_PAVIMENTOS = [
     "#E8F5E9", "#C8E6C9", "#A5D6A7", "#81C784", "#66BB6A",
     "#4CAF50", "#43A047", "#388E3C", "#2E7D32", "#1B5E20",
@@ -224,7 +202,7 @@ if "eq2" not in st.session_state: st.session_state["eq2"] = "Equipe 2 - João"
 if "eq3" not in st.session_state: st.session_state["eq3"] = "Equipe 3 - Carlos"
 if "eq4" not in st.session_state: st.session_state["eq4"] = "Equipe 4 - Lucas"
 
-st.sidebar.header("⚙️ Configurações das Equipes")
+st.sidebar.header("⚙️ Equipes de Trabalho")
 st.session_state["eq1"] = st.sidebar.text_input("Equipe 1", st.session_state["eq1"])
 st.session_state["eq2"] = st.sidebar.text_input("Equipe 2", st.session_state["eq2"])
 st.session_state["eq3"] = st.sidebar.text_input("Equipe 3", st.session_state["eq3"])
@@ -240,17 +218,15 @@ LISTA_EQUIPES = [
 df_atual = carregar_dados()
 
 # ---------------------------------------------------------
-# ATALHO PARA PAVIMENTOS CONCLUÍDOS
+# ATALHO PARA PAVIMENTOS JÁ CONCLUÍDOS (SEM AFETAR EQUIPES)
 # ---------------------------------------------------------
 st.sidebar.markdown("---")
-st.sidebar.header("🏆 Finalizar Pavimento")
+st.sidebar.header("🏆 Concluir Pavimento Antigo")
+st.sidebar.caption("Utilize para marcar pavimentos já prontos sem associar à produção atual de nenhuma equipe.")
 
 pav_pronto = st.sidebar.selectbox("Pavimento Concluído", range(1, 22), format_func=lambda x: f"Pavimento {x:02d}", key="pav_pronto_sel")
-eq_pronto = st.sidebar.selectbox("Equipe Responsável", LISTA_EQUIPES, key="eq_pronto_sel")
-dt_pronto = st.sidebar.date_input("Data de Conclusão", datetime.date.today(), key="dt_pronto_sel")
-sacos_pronto = st.sidebar.number_input("Sacos Argamassa (30kg) do Pavimento", min_value=0, value=0, key="sacos_pronto_sel")
 
-if st.sidebar.button("Marcar Pavimento 100% Concluído"):
+if st.sidebar.button("Marcar como 100% Concluído"):
     str_pav = f"Pavimento {pav_pronto:02d}"
     novos = []
     
@@ -273,16 +249,16 @@ if st.sidebar.button("Marcar Pavimento 100% Concluído"):
                 area_ef = (area_m2 * pct_rest) / 100.0
                 novos.append({
                     "ID": start_id,
-                    "Data": dt_pronto.strftime('%Y-%m-%d'),
-                    "Equipe": eq_pronto,
+                    "Data": "2000-01-01",  # Data retroativa para não interferir nas análises do mês
+                    "Equipe": "Nenhuma / Legado",
                     "Pavimento": str_pav,
                     "Unidade": un_nome,
                     "Ambiente": amb_nome,
                     "% Concluído": pct_rest,
-                    "Área Executada (m²)": area_ef,
+                    "Área Executada (m²)": round(area_ef, 2),
                     "Peças Porcelanato": 0,
                     "Peças Cerâmica": 0,
-                    "Sacos Argamassa (30kg)": sacos_pronto if len(novos) == 0 else 0
+                    "Sacos Argamassa (30kg)": 0
                 })
                 start_id += 1
                 
@@ -291,13 +267,14 @@ if st.sidebar.button("Marcar Pavimento 100% Concluído"):
         salvar_dados(df_novo)
         st.sidebar.success(f"{str_pav} finalizado com sucesso!")
         st.rerun()
+    else:
+        st.sidebar.warning(f"{str_pav} já está 100% concluído.")
 
 if not df_atual.empty:
     st.sidebar.markdown("---")
-    st.sidebar.header("📥 Relatório")
     csv = df_atual.to_csv(index=False).encode('utf-8')
     st.sidebar.download_button(
-        label="Exportar para CSV",
+        label="📥 Exportar Dados (CSV)",
         data=csv,
         file_name=f"relatorio_porcelanato_{datetime.date.today()}.csv",
         mime="text/csv",
@@ -305,7 +282,7 @@ if not df_atual.empty:
     )
 
 # ---------------------------------------------------------
-# INTERFACE PRINCIPAL
+# INTERFACE PRINCIPAL DE LANÇAMENTO
 # ---------------------------------------------------------
 st.title("🧱 Produção de Porcelanato")
 st.subheader("📝 Registros Diários de Produção")
@@ -335,7 +312,7 @@ ambientes_dict = AREAS_DETALHADAS[tipo_key][customizacao]
 tab1, tab2, tab3 = st.tabs(["✅ Ambientes Concluídos", "📐 Lançamento Parcial (%)", "🏢 Status dos Pavimentos"])
 
 with tab1:
-    st.markdown("##### Selecione os ambientes concluídos no dia:")
+    st.markdown("##### Selecione os ambientes concluídos:")
     ambientes_100 = st.multiselect("Ambientes Finalizados", options=list(ambientes_dict.keys()))
     
     if ambientes_100:
@@ -348,7 +325,7 @@ with tab1:
             mat_tipo = ambientes_dict[amb][1]
             pecas_dict[amb] = st.number_input(f"Peças para {amb} ({mat_tipo})", min_value=0, value=0, key=f"pecas_{amb}")
             
-        st.markdown("##### Argamassa Utilizada na Produção do Dia:")
+        st.markdown("##### Argamassa Utilizada no Dia:")
         sacos_dia_100 = st.number_input("Total de Sacos de Argamassa (30kg) no dia pela equipe", min_value=0, value=0, key="sacos_100_dia")
         
         if st.button("🚀 Salvar Lançamentos Totais", use_container_width=True):
@@ -364,7 +341,6 @@ with tab1:
                 p_porc = pecas_dict[amb] if mat_tipo == "Porcelanato 70x70" else 0
                 p_ceram = pecas_dict[amb] if mat_tipo == "Cerâmica 45x45" else 0
                 
-                # Atribui o total de argamassa no primeiro item selecionado para não duplicar o total do dia
                 arg_item = sacos_dia_100 if idx == 0 else 0
 
                 novos_registros.append({
@@ -374,8 +350,8 @@ with tab1:
                     "Pavimento": str_pavimento,
                     "Unidade": unidade_sel,
                     "Ambiente": amb,
-                    "% Concluído": pct_restante,
-                    "Área Executada (m²)": area_efetiva,
+                    "% Concluído": round(pct_restante, 2),
+                    "Área Executada (m²)": round(area_efetiva, 2),
                     "Peças Porcelanato": p_porc,
                     "Peças Cerâmica": p_ceram,
                     "Sacos Argamassa (30kg)": arg_item
@@ -395,14 +371,14 @@ with tab2:
     pct_ja_feita = calcular_pct_acumulado(df_atual, str_pavimento, unidade_sel, amb_parcial)
     pct_max_permitida = max(0.0, 100.0 - pct_ja_feita)
 
-    st.write(f"**Área Total:** `{area_tot_p:.2f} m²` | **Material:** `{tipo_mat_p}` | **Já Executado:** `{pct_ja_feita:.1f}%`")
+    st.write(f"**Área Total:** `{area_tot_p:.2f} m²` | **Material:** `{tipo_mat_p}` | **Já Executado:** `{pct_ja_feita:.2f}%`")
     
     if pct_max_permitida <= 0:
-        st.warning("⚠️ Este ambiente já atingiu 100% de conclusão!")
+        st.warning("⚠️ Este ambiente já atingiu 100.00% de conclusão!")
     else:
         valor_padrao = min(50.0, float(pct_max_permitida))
         pct_parcial = st.number_input(
-            f"Porcentagem Concluída Hoje (Máximo: {pct_max_permitida:.1f}%)", 
+            f"Porcentagem Concluída Hoje (Máximo: {pct_max_permitida:.2f}%)", 
             min_value=1.0, 
             max_value=float(pct_max_permitida), 
             value=valor_padrao, 
@@ -412,7 +388,7 @@ with tab2:
         st.info(f"**Área Parcial Calculada:** `{area_efetiva_p:.2f} m²`")
         
         c_p1, c_p2 = st.columns(2)
-        pecas_p = c_p1.number_input(f"Quantidade de Peças Utilizadas ({tipo_mat_p})", min_value=0, value=0)
+        pecas_p = c_p1.number_input(f"Quantidade de Peças ({tipo_mat_p})", min_value=0, value=0)
         sacos_p = c_p2.number_input("Total de Sacos de Argamassa (30kg) no Dia", min_value=0, value=0)
         
         p_porc_p = pecas_p if tipo_mat_p == "Porcelanato 70x70" else 0
@@ -427,8 +403,8 @@ with tab2:
                 "Pavimento": str_pavimento,
                 "Unidade": unidade_sel,
                 "Ambiente": amb_parcial,
-                "% Concluído": pct_parcial,
-                "Área Executada (m²)": area_efetiva_p,
+                "% Concluído": round(pct_parcial, 2),
+                "Área Executada (m²)": round(area_efetiva_p, 2),
                 "Peças Porcelanato": p_porc_p,
                 "Peças Cerâmica": p_ceram_p,
                 "Sacos Argamassa (30kg)": sacos_p
@@ -440,8 +416,7 @@ with tab2:
             st.rerun()
 
 with tab3:
-    st.markdown("### 🏢 Visão Geral dos Pavimentos")
-    st.write("Acompanhamento do percentual de execução e equipe responsável por pavimento:")
+    st.markdown("### 🏢 Status dos Pavimentos")
     
     pav_summary = []
     for p in range(1, 22):
@@ -451,10 +426,11 @@ with tab3:
         if not df_atual.empty:
             df_p = df_atual[df_atual["Pavimento"] == str_p]
             area_exec = df_p["Área Executada (m²)"].sum()
-            equipes = ", ".join(df_p["Equipe"].unique()) if not df_p.empty else "Nenhuma equipe alocada"
+            eqs_validas = [eq for eq in df_p["Equipe"].unique() if eq != "Nenhuma / Legado"]
+            equipes = ", ".join(eqs_validas) if eqs_validas else ("Concluído (Legado)" if "Nenhuma / Legado" in df_p["Equipe"].values else "Pendente")
         else:
             area_exec = 0.0
-            equipes = "Nenhuma equipe alocada"
+            equipes = "Pendente"
             
         pct_exec = min((area_exec / area_teorica) * 100, 100.0)
         
@@ -465,14 +441,12 @@ with tab3:
             "Área Executada": f"{area_exec:.2f} m² / {area_teorica:.2f} m²"
         })
         
-    df_pav_summary = pd.DataFrame(pav_summary)
-    st.dataframe(df_pav_summary, use_container_width=True)
+    st.dataframe(pd.DataFrame(pav_summary), use_container_width=True)
 
 # ---------------------------------------------------------
-# PAINEL DE PRODUÇÃO E INSUMOS
+# PRODUÇÃO E INSUMOS
 # ---------------------------------------------------------
 st.markdown("---")
-
 df = carregar_dados()
 
 if not df.empty:
@@ -490,67 +464,32 @@ if not df.empty:
     m3.metric("Peças Utilizadas", f"{tot_porc + tot_ceram:.0f} un")
     m4.metric("Argamassa Total", f"{tot_sacos:.0f} sacos")
     
-    # Gráfico de Comparação Diária e Média
-    st.markdown("### ⚔️ Produção por Equipes (Hoje vs Média do Mês)")
+    # ---------------------------------------------------------
+    # RESUMO DE PEÇAS POR EQUIPE
+    # ---------------------------------------------------------
+    st.markdown("### 🧩 Consumo de Peças por Equipe")
+    df_equipes_pecas = df[df["Equipe"] != "Nenhuma / Legado"].groupby("Equipe").agg(
+        Porcelanato=("Peças Porcelanato", "sum"),
+        Cerâmica=("Peças Cerâmica", "sum"),
+        Area_Total=("Área Executada (m²)", "sum")
+    ).reset_index()
     
-    data_sel_comp = st.date_input("Data de Comparação", datetime.date.today())
-    dt_str = data_sel_comp.strftime('%Y-%m-%d')
-    dt_comp = pd.to_datetime(data_sel_comp)
-    
-    df_dt_parsed = pd.to_datetime(df["Data"])
-    df_mes = df[(df_dt_parsed.dt.year == dt_comp.year) & (df_dt_parsed.dt.month == dt_comp.month)]
-    
-    df_dia_eq = df[df["Data"] == dt_str].groupby("Equipe")["Área Executada (m²)"].sum()
-    
-    dias_trabalhados = df_mes.groupby(["Equipe", "Data"])["Área Executada (m²)"].sum().reset_index()
-    df_media_eq = dias_trabalhados.groupby("Equipe")["Área Executada (m²)"].mean()
-    
-    prod_hoje_list = [df_dia_eq.get(eq, 0.0) for eq in LISTA_EQUIPES]
-    media_mes_list = [df_media_eq.get(eq, 0.0) for eq in LISTA_EQUIPES]
-        
-    fig_comp = go.Figure()
-    
-    fig_comp.add_trace(go.Bar(
-        x=LISTA_EQUIPES,
-        y=prod_hoje_list,
-        name="Produção Hoje (m²)",
-        marker_color="#55A453",
-        text=[f"<b>{v:.1f} m²</b>" for v in prod_hoje_list],
-        textposition="outside"
-    ))
-    
-    fig_comp.add_trace(go.Bar(
-        x=LISTA_EQUIPES,
-        y=media_mes_list,
-        name="Média Diária no Mês (m²)",
-        marker_color="#004716",
-        text=[f"<b>{v:.1f} m²</b>" for v in media_mes_list],
-        textposition="outside"
-    ))
-    
-    fig_comp.update_layout(
-        barmode='group',
-        title=dict(text=f"<b>Produção em {dt_comp.strftime('%d/%m/%Y')}</b>", font=dict(color="#004716", size=18)),
-        xaxis_title="<b>Equipe</b>",
-        yaxis_title="<b>Área Executada (m²)</b>",
-        template="plotly_white",
-        height=430,
-        font=dict(color="#004716", size=13),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-    )
-    
-    st.plotly_chart(fig_comp, use_container_width=True)
+    df_equipes_pecas["Area_Total"] = df_equipes_pecas["Area_Total"].map(lambda x: f"{x:.2f} m²")
+    st.dataframe(df_equipes_pecas, use_container_width=True)
 
-    # Gráfico de Histórico Diário
-    st.markdown("### 📈 Produção Diária (Meta: 20 m²/dia)")
+    # ---------------------------------------------------------
+    # GRÁFICO DIÁRIO COM COR AZUL (>=20) E VERMELHO (<20)
+    # ---------------------------------------------------------
+    st.markdown("### 📈 Produção Diária (Meta: 20,00 m²/dia)")
     
-    eq_filtro = st.radio("Filtrar Equipe", ["Todas"] + LISTA_EQUIPES, horizontal=True)
-    df_graph = df if eq_filtro == "Todas" else df[df["Equipe"] == eq_filtro]
+    eq_filtro = st.radio("Filtrar Equipe no Gráfico", ["Todas"] + LISTA_EQUIPES, horizontal=True)
+    df_graph = df[(df["Equipe"] == eq_filtro)] if eq_filtro != "Todas" else df[df["Equipe"] != "Nenhuma / Legado"]
     
     df_diario = df_graph.groupby("Data").agg(Area_Dia=("Área Executada (m²)", "sum")).reset_index()
     
     if not df_diario.empty:
-        df_diario["Cor"] = df_diario["Area_Dia"].apply(lambda x: "#55A453" if x >= 20 else "#d62728")
+        # Lógica de cor: Azul se >= 20, Vermelho se < 20
+        df_diario["Cor"] = df_diario["Area_Dia"].apply(lambda x: "#1f77b4" if x >= 20.0 else "#d62728")
         max_y = max(df_diario["Area_Dia"].max() + 5, 25)
         
         fig = go.Figure()
@@ -560,13 +499,13 @@ if not df.empty:
             x=datas_formatadas,
             y=df_diario["Area_Dia"],
             marker_color=df_diario["Cor"],
-            text=df_diario["Area_Dia"].apply(lambda x: f"<b>{x:.1f} m²</b>"),
+            text=df_diario["Area_Dia"].apply(lambda x: f"<b>{x:.2f} m²</b>"),
             textposition="outside"
         ))
         
         fig.add_shape(
             type="line", x0=-0.5, x1=len(df_diario)-0.5, y0=20, y1=20,
-            line=dict(color="orange", width=3, dash="dash")
+            line=dict(color="black", width=2, dash="dash")
         )
         
         fig.update_layout(
@@ -582,15 +521,13 @@ if not df.empty:
         st.plotly_chart(fig, use_container_width=True)
 
     # ---------------------------------------------------------
-    # TABELA COM CORES E GERENCIAMENTO DE EXCLUSÃO
+    # DIVISION DE TABELAS: DO DIA VS HISTÓRICO COMPLETO
     # ---------------------------------------------------------
     st.markdown("---")
-    st.subheader("📋 Tabela de Lançamentos e Exclusão")
+    st.subheader("📋 Tabelas de Lançamentos")
     
-    df_exibicao = df.copy()
-    df_exibicao["Data"] = pd.to_datetime(df_exibicao["Data"]).dt.strftime('%d/%m/%Y')
+    dt_hoje_str = data_reg.strftime('%Y-%m-%d')
     
-    # Função para atribuir cores dinâmicas para cada pavimento na tabela
     def colorir_pavimentos(val):
         try:
             num = int(str(val).replace("Pavimento ", ""))
@@ -599,25 +536,46 @@ if not df.empty:
         except:
             return ''
 
-    df_styled = df_exibicao.sort_values(by="ID", ascending=False).style.map(colorir_pavimentos, subset=["Pavimento"])
-    st.dataframe(df_styled, use_container_width=True)
+    # Tabela 1: Apensas Lançamentos do Dia Selecionado
+    st.markdown(f"#### 📅 Lançamentos do Dia ({data_reg.strftime('%d/%m/%Y')})")
+    df_hoje = df[df["Data"] == dt_hoje_str].copy()
+    
+    if not df_hoje.empty:
+        df_hoje["Data"] = pd.to_datetime(df_hoje["Data"]).dt.strftime('%d/%m/%Y')
+        df_hoje["% Concluído"] = df_hoje["% Concluído"].map(lambda x: f"{x:.2f}%")
+        df_hoje["Área Executada (m²)"] = df_hoje["Área Executada (m²)"].map(lambda x: f"{x:.2f}")
+        
+        st.dataframe(df_hoje.sort_values(by="ID", ascending=False).style.map(colorir_pavimentos, subset=["Pavimento"]), use_container_width=True)
+    else:
+        st.info("Nenhum lançamento registrado nesta data.")
 
-    # Painel para apagar lançamentos
-    st.markdown("##### 🗑️ Central de Apagamento e Correções")
+    # Tabela 2: Lançamentos Históricos Totais
+    st.markdown("#### 📜 Histórico Geral de Lançamentos")
+    df_exibicao = df.copy()
+    df_exibicao["Data"] = pd.to_datetime(df_exibicao["Data"]).dt.strftime('%d/%m/%Y')
+    df_exibicao["% Concluído"] = df_exibicao["% Concluído"].map(lambda x: f"{x:.2f}%")
+    df_exibicao["Área Executada (m²)"] = df_exibicao["Área Executada (m²)"].map(lambda x: f"{x:.2f}")
+
+    st.dataframe(df_exibicao.sort_values(by="ID", ascending=False).style.map(colorir_pavimentos, subset=["Pavimento"]), use_container_width=True)
+
+    # ---------------------------------------------------------
+    # PAINEL DE EXCLUSÃO DE LANÇAMENTOS
+    # ---------------------------------------------------------
+    st.markdown("##### 🗑️ Gerenciar e Apagar Lançamentos")
     c_del1, c_del2 = st.columns(2)
     
     with c_del1:
-        st.markdown("**Apagar Lançamento Específico:**")
-        id_para_deletar = st.selectbox("Selecione o ID do Lançamento a Apagar", options=df_exibicao["ID"].tolist())
-        if st.button("❌ Apagar Lançamento Selecionado"):
+        st.markdown("**Apagar um Lançamento Específico:**")
+        id_para_deletar = st.selectbox("Selecione o ID do Lançamento para Apagar", options=df_exibicao["ID"].tolist())
+        if st.button("❌ Apagar Lançamento ID Selecionado"):
             df_novo = df[df["ID"] != id_para_deletar].reset_index(drop=True)
             salvar_dados(df_novo)
-            st.success(f"Lançamento ID {id_para_deletar} removido!")
+            st.success(f"Lançamento ID {id_para_deletar} removido com sucesso!")
             st.rerun()
 
     with c_del2:
-        st.markdown("**Limpar Todos os Dados de Teste:**")
-        if st.button("🔥 ZERAR TODOS OS DADOS"):
+        st.markdown("**Limpar Registros de Teste:**")
+        if st.button("🔥 APAGAR TODOS OS DADOS"):
             salvar_dados(pd.DataFrame(columns=COLUNAS))
-            st.warning("Todos os lançamentos foram apagados com sucesso!")
+            st.warning("Todos os lançamentos foram apagados!")
             st.rerun()
